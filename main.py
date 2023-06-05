@@ -3,7 +3,7 @@ from pygame import *
 from random import randint
 from pygame.locals import *
 
-
+ 
 width, height = 640, 480
 screen = display.set_mode((width, height))
 
@@ -22,10 +22,10 @@ font2 = font.Font(None, 36)
 img_back = "sky1.png" #фон 
 img_mario = "mario.png" #герой
 img_enemy = "brik.png" #кирпичи(враги)
+img_ball = "ball.png"
 
 score = 0 
-lost = 0 
-
+lost = 0
 
 class GameSprite(sprite.Sprite):
     def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
@@ -66,9 +66,13 @@ class Player(GameSprite):
             else:
                 self.is_jumping = False
                 self.jump_count = 10
+    def fire(self):
+       ball = Ball(img_ball, self.rect.centerx, self.rect.top, 15, 20, -15)
+       balls.add(ball)
+
  
     
-
+    
 class Enemy(GameSprite):
     def update(self):
         self.rect.y += self.speed
@@ -78,6 +82,12 @@ class Enemy(GameSprite):
             self.rect.y = 0
             lost = lost + 1
 
+class Ball(GameSprite):
+    def update(self):
+        self.rect.y += self.speed 
+        if self.rect.y < 0:
+            self.kill()
+
 
 
 win_width = 700
@@ -86,11 +96,13 @@ display.set_caption("Mario")
 window = display.set_mode((win_width, win_height))
 background = transform.scale(image.load(img_back), (win_width, win_height))
 human = Player(img_mario, 5, win_height - 100, 80, 100, 10, 10)
-monsters = sprite.Group()
+beasts = sprite.Group()
+
+balls = sprite.Group()
 
 for i in range(1, 6):
-    monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
-    monsters.add(monster)
+    beast = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+    beasts.add(beast)
 
 finish = False
 run = True 
@@ -102,6 +114,11 @@ while run:
         if i.type == KEYDOWN:
             if i.key == K_SPACE and not is_jumping:
                 is_jumping = True
+        if i.type == KEYDOWN:
+            if i.key == K_s and not is_jumping:
+                human.fire()
+
+            
 
     if is_jumping:
         y -= jump_speed 
@@ -115,22 +132,28 @@ while run:
         window.blit(background,(0,0))
 
         human.update()
-        monsters.update()
+        beasts.update()
+        balls.update()
         
         human.reset()
-        monsters.draw(window)
+        beasts.draw(window)
+        balls.draw(window)
 
-        collides = sprite.spritecollide(human, monsters, False)
+        collides = sprite.spritecollide(human, beasts, False)
+        collides = sprite.groupcollide(beasts, balls, True, True)
+        for c in collides:
+           #этот цикл повторится столько раз, сколько монстров подбито
+            score = score + 1
+            beast = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+            beasts.add(beast)
+
         # screen.fill((0, 0, 0))
         # draw.rect(screen, (255,255, 235),(x, y, 50, 50))
         # display.flip()   
 
-        # for c in collides:
-        #     score = score + 1
-        #     monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
-        #     monsters.add(monster)
         
-        if sprite.spritecollide(human, monsters, False):
+        
+        if sprite.spritecollide(human, beasts, False):
             finish = True
             #run = False
             window.blit(lose, (200, 200))
@@ -143,13 +166,13 @@ while run:
         finish = False
         score = 0
         lost = 0
-        for m in monsters:
+        for m in beasts:
             m.kill()
 
 
         time.delay(2000)
         for i in range(1, 5):
-            monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
-            monsters.add(monster)
+            beast = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+            beasts.add(beast)
     display.update()    
     time.delay(50)
